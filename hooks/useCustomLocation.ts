@@ -189,7 +189,7 @@ const cleanReverseGeocodeCache = (): void => {
   const now = Date.now();
   const keysToDelete: string[] = [];
 
-  for (const [key, value] of reverseGeocodeCache.entries()) {
+  for (const [key, value] of Array.from(reverseGeocodeCache.entries())) {
     if (now - value.timestamp > REVERSE_GEOCODE_CACHE_TTL) {
       keysToDelete.push(key);
     }
