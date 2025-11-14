@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import useLocation from "../hooks/useCustomLocation";
 
-
 export default function App() {
   // Flag to switch between standard method and hook
   const [useHook, setUseHook] = useState(false);
@@ -42,8 +41,6 @@ export default function App() {
     useState<Location.LocationGeocodedAddress | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [counter, setCounter] = useState<number>(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use data from hook or standard method
   // Normalize hookCoords to LocationObject when using hook
@@ -60,14 +57,6 @@ export default function App() {
   const currentLoading = useHook ? isManualRequest && hookLoading : loading;
   const currentError = useHook ? hookError : errorMsg;
 
-  // Don't start counter automatically - only when clicking refresh
-
-  useEffect(() => {
-    if (currentLocation && currentAddress && intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, [currentLocation, currentAddress]);
 
   // Function to fetch location with standard method
   const fetchLocationStandard = async () => {
@@ -88,8 +77,11 @@ export default function App() {
 
     console.log("✅ Permission granted");
     try {
-      console.log("📍 Fetching location");
-      let locationData = await Location.getCurrentPositionAsync({});
+      console.log("📍 Fetching location (force refresh - no cache)");
+      // Force new GPS reading without using cache - high accuracy
+      let locationData = await Location.getCurrentPositionAsync({
+        accuracy: Location.LocationAccuracy.Highest,
+      });
       console.log("✅ Location obtained");
 
       console.log("🏠 Fetching address");
@@ -126,7 +118,8 @@ export default function App() {
     setIsManualRequest(true);
     startTimeRef.current = Date.now();
     hookMeasuringRef.current = true;
-    await hookRefresh();
+    // Force refresh without cache
+    await hookRefresh(true);
   };
 
   // Hook measurement - measures from fetch start until data is available
@@ -157,16 +150,6 @@ export default function App() {
     // Mark that a request was initiated
     setHasRequested(true);
 
-    // Reset counter and restart interval
-    setCounter(0);
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-
-    const interval = setInterval(() => {
-      setCounter((prevCounter) => prevCounter + 1);
-    }, 1000);
-    intervalRef.current = interval as unknown as NodeJS.Timeout;
     if (useHook) {
       await fetchLocationHook();
     } else {
@@ -183,9 +166,6 @@ export default function App() {
         <View style={styles.header}>
           <Text style={styles.title}>Location</Text>
           <View style={styles.headerRight}>
-            <Text style={[styles.counter, { marginRight: 12 }]}>
-              {counter}s
-            </Text>
             <TouchableOpacity
               style={[
                 styles.refreshButton,
@@ -225,6 +205,7 @@ export default function App() {
             </Text>
           </TouchableOpacity>
         </View>
+
 
         {(timeStandard !== null || timeHook !== null) && (
           <View style={styles.timeContainer}>
@@ -453,11 +434,6 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  counter: {
-    fontSize: 14,
-    color: "#333",
-    fontWeight: "300",
   },
   refreshButton: {
     width: 36,
